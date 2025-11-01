@@ -1,0 +1,86 @@
+{
+	"name": "sales_transaction",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_datalakegen2_mydata_sales_transaction",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_ls_datalakegen2_urdata",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "aggregate1"
+				},
+				{
+					"name": "presentmon"
+				},
+				{
+					"name": "previousmonth"
+				},
+				{
+					"name": "join1"
+				},
+				{
+					"name": "derivedColumn2"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          dot as string,",
+				"          amount as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source1 derive(mon = toInteger(substring(dot,1,2))) ~> derivedColumn1",
+				"derivedColumn1 aggregate(groupBy(mon),",
+				"     total_mon = sum(amount)) ~> aggregate1",
+				"previousmonth select(mapColumn(",
+				"          presentmonth = previousmonth,",
+				"          present_total_mon = prevoius_total_mon",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> presentmon",
+				"aggregate1 select(mapColumn(",
+				"          previousmonth = mon,",
+				"          prevoius_total_mon = total_mon",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> previousmonth",
+				"presentmon, previousmonth join(presentmonth-previousmonth==1,",
+				"     joinType:'cross',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> join1",
+				"join1 derive(Grate = ((present_total_mon-prevoius_total_mon)*100)/prevoius_total_mon,",
+				"          Gstatus = iif(present_total_mon > prevoius_total_mon  , 'Increased',iif(present_total_mon < prevoius_total_mon, 'Decreased', 'NoGrowth'))) ~> derivedColumn2",
+				"derivedColumn2 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['sales_report.txt'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sink1"
+			]
+		}
+	}
+}

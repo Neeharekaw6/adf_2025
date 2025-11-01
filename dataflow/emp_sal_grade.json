@@ -1,0 +1,76 @@
+{
+	"name": "emp_sal_grade",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_datalakegen2_mydata_emp_header",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_ls_datalakegen2_urdata",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "derivedColumn2"
+				},
+				{
+					"name": "select1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          id as integer,",
+				"          name as string,",
+				"          salary as integer,",
+				"          gender as string,",
+				"          dept as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source1 derive(dname = iif(dept==11,'Marketing',\r",
+				"iif(dept==12,'HR',\r",
+				"iif(dept==13,'Finance','Other'))),",
+				"          grade = iif(salary>=100000, 'A',     iif(salary>=75000, 'B',   iif(salary>=50000, 'C', 'D'))),",
+				"          Gender = iif(gender=='m','Male','Female'),",
+				"          hra = salary*0.2,",
+				"          tax = salary *0.1) ~> derivedColumn1",
+				"derivedColumn1 derive(netsal = salary+hra-tax) ~> derivedColumn2",
+				"derivedColumn2 select(mapColumn(",
+				"          id,",
+				"          salary,",
+				"          dname,",
+				"          grade,",
+				"          Gender = derivedColumn1@Gender,",
+				"          hra,",
+				"          tax,",
+				"          netsal",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"select1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink1"
+			]
+		}
+	}
+}

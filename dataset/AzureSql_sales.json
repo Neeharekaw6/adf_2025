@@ -1,0 +1,30 @@
+{
+	"name": "AzureSql_sales",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_AzureSqlDatabase_emp",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "trid",
+				"type": "varchar"
+			},
+			{
+				"name": "cid",
+				"type": "varchar"
+			},
+			{
+				"name": "info",
+				"type": "varchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "sales"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

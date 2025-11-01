@@ -1,0 +1,140 @@
+{
+	"name": "union",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_datalakegen2_mydata_emp1",
+						"type": "DatasetReference"
+					},
+					"name": "emp1"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_datalakegen2_mydata_emp2",
+						"type": "DatasetReference"
+					},
+					"name": "emp2"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_datalakegen2_mydata_emp3",
+						"type": "DatasetReference"
+					},
+					"name": "emp3"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_datalakegen2_mydata_emp4",
+						"type": "DatasetReference"
+					},
+					"name": "emp4"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_ls_datalakegen2_urdata",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "derivedColumn2"
+				},
+				{
+					"name": "derivedColumn3"
+				},
+				{
+					"name": "derivedColumn4"
+				},
+				{
+					"name": "union1"
+				},
+				{
+					"name": "select1"
+				},
+				{
+					"name": "aggregate1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          id as integer,",
+				"          name as string,",
+				"          salary as integer,",
+				"          gender as string,",
+				"          dept_no as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> emp1",
+				"source(output(",
+				"          id as integer,",
+				"          name as string,",
+				"          salary as integer,",
+				"          gender as string,",
+				"          dept_no as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> emp2",
+				"source(output(",
+				"          id as integer,",
+				"          name as string,",
+				"          dept_no as integer,",
+				"          gender as string,",
+				"          salary as integer,",
+				"          age as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> emp3",
+				"source(output(",
+				"          id as integer,",
+				"          name as string,",
+				"          dept_no as integer,",
+				"          gender as string,",
+				"          city as string,",
+				"          salary as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> emp4",
+				"emp1 derive(branch = 'branch1') ~> derivedColumn1",
+				"emp2 derive(branch = 'branch2') ~> derivedColumn2",
+				"emp3 derive(branch = 'branch3') ~> derivedColumn3",
+				"emp4 derive(branch = 'branch4') ~> derivedColumn4",
+				"derivedColumn1, derivedColumn2, derivedColumn3, derivedColumn4 union(byName: true)~> union1",
+				"union1 select(mapColumn(",
+				"          salary,",
+				"          gender,",
+				"          dept_no,",
+				"          branch",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"select1 aggregate(groupBy(branch,",
+				"          dept_no,",
+				"          gender),",
+				"     salary = sum(salary)) ~> aggregate1",
+				"aggregate1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['branch_total.txt'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sink1"
+			]
+		}
+	}
+}

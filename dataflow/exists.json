@@ -1,0 +1,130 @@
+{
+	"name": "exists",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_datalakege2_mydata_day1",
+						"type": "DatasetReference"
+					},
+					"name": "day1"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_datalakege2_mydata_day2",
+						"type": "DatasetReference"
+					},
+					"name": "day2"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_ls_datalakegen2_urdata",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_ls_datalakegen2_urdata",
+						"type": "DatasetReference"
+					},
+					"name": "sink2"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_ls_datalakegen2_urdata",
+						"type": "DatasetReference"
+					},
+					"name": "sink3"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_ls_datalakegen2_urdata",
+						"type": "DatasetReference"
+					},
+					"name": "sink4"
+				}
+			],
+			"transformations": [
+				{
+					"name": "regular"
+				},
+				{
+					"name": "day1attendance"
+				},
+				{
+					"name": "day2attendance"
+				},
+				{
+					"name": "union1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          id as integer,",
+				"          name as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> day1",
+				"source(output(",
+				"          id as integer,",
+				"          name as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> day2",
+				"day1, day2 exists(day1@id == day2@id,",
+				"     negate:false,",
+				"     broadcast: 'auto')~> regular",
+				"day1, day2 exists(day1@id == day2@id,",
+				"     negate:true,",
+				"     broadcast: 'auto')~> day1attendance",
+				"day2, day1 exists(day2@id == day1@id,",
+				"     negate:true,",
+				"     broadcast: 'auto')~> day2attendance",
+				"regular, day1attendance, day2attendance union(byName: true)~> union1",
+				"day1attendance sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['day1attendance.txt'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sink1",
+				"day2attendance sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['day2attendance.txt'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sink2",
+				"regular sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['regular.txt'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sink3",
+				"union1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['allattendance.txt'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sink4"
+			]
+		}
+	}
+}
