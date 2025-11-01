@@ -1,0 +1,80 @@
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: 
+    -"main" 
+  pull_request:
+    branches: [ "main" ]
+
+permissions :
+  id-token : write
+  contents : read
+  
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+
+      # Runs a single command using the runners shell
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v3.4.1
+        with : 
+           node-version: 18.x
+
+      # Runs a set of commands using the runners shell
+      - name: install ADF Utilities Package
+        run: nmp install
+        working-directory: ${{github.workspace}}/build
+
+      -name : Validate
+        run: nmp run build validate ${{github.workspace}}/build/ /subscriptions/3897f715-2704-488e-9c8b-dc976801eb08/resourceGroups/cicd_dev/providers/Microsoft.DataFactory/factories/adfneeehacicd2025dev
+        working-directories: ${{github.workspace}}/build
+        
+      -name : validate and run ARM template
+        run:  nmp run build export ${{github.workspace}}/build/ /subscriptions3897f715-2704-488e-9c8b-dc976801eb08/resourceGroups/cicd_dev/providers/Microsoft.DataFactory/factories/adfneeehacicd2025dev "ExportedARMTemplate"
+        working-directories: :${{github.workspace}}/build
+
+      -name : upload artifact
+       uses: actions/upload-artifact@v4
+       with: 
+         name: ExortedArmTemplate
+         path: :${{github.workspace}}/build/ExortedArmTemplate
+
+      release: 
+      needs: build
+      runs-on: unbuntu-latest
+      steps :
+
+      -name : Download a Build Artifact
+      uses: actions/download-artifact@v4
+      with:
+      name : ExportedArmTemplate
+
+
+      -name: Login via Az module
+      uses: azure/login@v1
+      with :
+        client_id: ${{secrets.AZURE_CLIENT_ID}}
+        tenant_id: ${{secrets.0ccc9e88-3f45-4b1a-90cb-3987ea623f50}}
+        subscription_id: ${{secrets.AZURE_CLIENT_ID}}
+        enable-AzPSSession: true
+
+    -name : data-factory-deploy
+    uses: Azure/data-factory-deploy-action@v1.2.0
+    with:
+      resourceGroupName: neeha2025
+      dataFactoryName: neehaadf2025
+      armTemplateFile : ARMTemplateFactory.json
+      armTemplateParametersFile : ARMTemplateParametersForFactory.json
+
+      -name: Download a Build Artifact
+      users:
+      
